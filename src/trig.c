@@ -36,7 +36,45 @@ twin_fixed_t twin_tan(twin_angle_t a)
         return 0;
     return ((s << 15) / c) << 1;
 }
+static inline twin_fixed_t arctan_poly(twin_fixed_t x) {
+    /* Polynomial approximation for arctan(x) based on a known approximation series
+     * For example, a Taylor series or a Pade approximation. Here is an example
+     * using a simplified form:
+     * atan(x) ≈ x - x^3/3 + x^5/5 (truncated series for small x)
+     * Adapt it for the fixed-point representation.
+     */
+    twin_fixed_t x2 = (x * x) >> 16;
+    twin_fixed_t term1 = x;                                   // x
+    twin_fixed_t term2 = (x * x2) / 3;                        // x^3 / 3
+    twin_fixed_t term3 = (term2 * x2) / 5;                    // x^5 / 5
+    return term1 - term2 + term3;
+}
 
+twin_angle_t twin_arctangent(twin_fixed_t y, twin_fixed_t x) {
+    if (x == 0) {
+        if (y > 0)
+            return TWIN_ANGLE_90;    // atan(+inf)
+        else if (y < 0)
+            return TWIN_ANGLE_270;   // atan(-inf)
+        else
+            return 0;                // atan(0)
+    }
+
+    twin_fixed_t ratio = (y << 16) / x;
+    twin_angle_t angle = arctan_poly(ratio);
+
+    /* Adjust angle based on quadrant */
+    if (x < 0) {
+        if (y < 0)
+            angle += TWIN_ANGLE_180;
+        else
+            angle = TWIN_ANGLE_180 - angle;
+    } else if (y < 0) {
+        angle = TWIN_ANGLE_360 + angle;
+    }
+
+    return angle;
+}
 static inline twin_fixed_t sin_poly(twin_angle_t x)
 {
     /* S(x) = x * 2^(-n) * (A1 - 2 ^ (q-p) * x * (2^-n) * x * 2^(-n) * (B1 - 2 ^

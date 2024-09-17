@@ -88,9 +88,13 @@ typedef int8_t twin_gfixed_t;
 #define twin_sfixed_mod(f) ((f) & 0xf)
 
 #define twin_int_to_sfixed(i) ((twin_sfixed_t) ((i) * 16))
+#define twin_int_to_dfixed(i) ((twin_dfixed_t) ((i) * 256))
 
 #define twin_sfixed_to_fixed(s) (((twin_fixed_t) (s)) << 12)
 #define twin_fixed_to_sfixed(f) ((twin_sfixed_t) ((f) >> 12))
+ 
+#define twin_dfixed_to_fixed(s) (((twin_fixed_t) (s)) << 8) 
+#define twin_fixed_to_dfixed(f) ((twin_sfixed_t) ((f) >> 8))
 
 #define twin_sfixed_to_dfixed(s) (((twin_dfixed_t) (s)) << 4)
 #define twin_dfixed_to_sfixed(d) ((twin_sfixed_t) ((d) >> 4))
@@ -131,6 +135,9 @@ typedef int8_t twin_gfixed_t;
  */
 #define twin_double_to_sfixed(d) ((twin_sfixed_t) ((d) * 16.0))
 #define twin_sfixed_to_double(f) ((double) (f) / 16.0)
+
+#define twin_double_to_dfixed(d) ((twin_sfixed_t) ((d) * 256.0))
+#define twin_dfixed_to_double(f) ((double) (f) / 256.0)
 
 #define TWIN_SFIXED_ONE (0x10)
 #define TWIN_SFIXED_HALF (0x08)

@@ -118,6 +118,7 @@ MKDIR      := mkdir -p
 
 __CFLAGS := -Wall -Wextra -pipe
 __CFLAGS += -O2 -pipe
+__CFLAGS += -fsanitize=address
 __CFLAGS += $(CFLAGS)
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')

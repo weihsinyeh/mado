@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "twin_private.h": "c",
+        "cmath": "c"
+    }
+}
