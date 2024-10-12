@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "apps_animation.h": "c",
+        "cstdlib": "c",
+        "apps_multi.h": "c"
+    }
+}

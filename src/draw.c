@@ -734,7 +734,7 @@ void _twin_apply_gaussian(twin_argb32_t v,
     *b += ((((v & 0x000000ff) >> 0) * (twin_argb32_t) wght) >> 4) & 0x000000ff;
     return;
 }
-
+// https://github.com/sudara/melatonin_blur/blob/main/melatonin/implementations/naive.h#L72-L109
 void twin_gaussian_blur(twin_pixmap_t *px)
 {
     if (px->format != TWIN_ARGB32)

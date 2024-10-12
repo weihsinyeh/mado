@@ -3,9 +3,10 @@
  * Copyright (c) 2004 Keith Packard <keithp@keithp.com>
  * All rights reserved.
  */
+#include <stddef.h>
 
 #include "apps_multi.h"
-
+#define ASSET_PATH "assets/"
 #define D(x) twin_double_to_fixed(x)
 
 static void apps_line_start(twin_screen_t *screen, int x, int y, int w, int h)
@@ -220,6 +221,43 @@ static void apps_jelly_start(twin_screen_t *screen, int x, int y, int w, int h)
     twin_window_show(window);
 }
 
+static void apps_JPGloader_start(twin_screen_t *screen, int x, int y, int w, int h)
+{
+    twin_window_t *window = twin_window_create(
+        screen, TWIN_ARGB32, TwinWindowApplication, x, y, w, h);
+    twin_pixmap_t *raw_background = twin_pixmap_from_file("assets/test.png", TWIN_ARGB32);
+    if (!raw_background) /* Fallback to a default pattern */
+        return twin_make_pattern();
+
+    if (h == raw_background->height && w == raw_background->width)
+        return raw_background;
+
+    /* Scale as needed. */
+    twin_pixmap_t *scaled_background =
+        twin_pixmap_create(TWIN_ARGB32, w, h);
+    if (!scaled_background) {
+        twin_pixmap_destroy(raw_background);
+        return twin_make_pattern();
+    }
+    twin_fixed_t sx, sy;
+    sx = twin_fixed_div(twin_int_to_fixed(raw_background->width),
+                        twin_int_to_fixed(w));
+    sy = twin_fixed_div(twin_int_to_fixed(raw_background->height),
+                        twin_int_to_fixed(h));
+
+    twin_matrix_scale(&raw_background->transform, sx, sy);
+    twin_operand_t srcop = {
+        .source_kind = TWIN_PIXMAP,
+        .u.pixmap = raw_background,
+    };
+    twin_composite(scaled_background, 0, 0, &srcop, 0, 0, NULL, 0, 0,
+                   TWIN_SOURCE, w, h);
+
+    twin_pixmap_destroy(raw_background);
+    window->pixmap = scaled_background;
+    
+}
+
 void apps_multi_start(twin_screen_t *screen,
                       const char *name,
                       int x,
@@ -233,4 +271,5 @@ void apps_multi_start(twin_screen_t *screen,
     apps_quickbrown_start(screen, x += 20, y += 20, w, h);
     apps_ascii_start(screen, x += 20, y += 20, w, h);
     apps_jelly_start(screen, x += 20, y += 20, w / 2, h);
+    apps_JPGloader_start(screen, x += 20, y += 20, w / 2, h);
 }
