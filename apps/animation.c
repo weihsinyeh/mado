@@ -28,6 +28,15 @@ static void _apps_animation_paint(apps_animation_t *anim)
         twin_animation_advance_frame(a);
     } else {
         current_frame = anim->pix;
+        twin_fixed_t sx, sy;
+        int desired_width = 300,desired_height = 300;
+
+        sx = twin_fixed_div(twin_int_to_fixed(current_frame->width),
+                            twin_int_to_fixed(desired_width));
+        sy = twin_fixed_div(twin_int_to_fixed(current_frame->height),
+                            twin_int_to_fixed(desired_height));
+        twin_matrix_scale(&current_frame->transform, sx, sy);
+        twin_gaussian_blur(current_frame, 3);
     }
 
     twin_operand_t srcop = {
@@ -96,6 +105,7 @@ void apps_animation_start(twin_screen_t *screen,
                           int y)
 {
     twin_pixmap_t *pix = twin_pixmap_from_file(path, TWIN_ARGB32);
+
     twin_toplevel_t *toplevel =
         twin_toplevel_create(screen, TWIN_ARGB32, TwinWindowApplication, x, y,
                              pix->width, pix->height, name);

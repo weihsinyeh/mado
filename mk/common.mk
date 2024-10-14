@@ -101,7 +101,8 @@ RM         := rm -rf
 MKDIR      := mkdir -p
 
 __CFLAGS := -Wall -Wextra
-__CFLAGS += -O2
+__CFLAGS += -O2 -pipe -g
+__CFLAGS += -fsanitize=address -static-libasan
 __CFLAGS += $(CFLAGS)
 
 uname_S := $(shell sh -c 'uname -s 2>/dev/null || echo not')

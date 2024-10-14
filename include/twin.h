@@ -648,7 +648,7 @@ void twin_fill(twin_pixmap_t *dst,
 
 void twin_premultiply_alpha(twin_pixmap_t *px);
 
-void twin_gaussian_blur(twin_pixmap_t *px);
+void twin_gaussian_blur(twin_pixmap_t *px, int radius);
 
 /*
  * event.c

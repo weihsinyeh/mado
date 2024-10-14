@@ -727,28 +727,74 @@ void _twin_apply_gaussian(twin_argb32_t v,
                                           uint8_t wght,
                                           twin_argb32_t *r,
                                           twin_argb32_t *g,
-                                          twin_argb32_t *b)
+                                          twin_argb32_t *b, int radius)
 {
-    *r += ((((v & 0x00ff0000) >> 16) * (twin_argb32_t) wght) << 12) & 0x00ff0000;
-    *g += (((v & 0x0000ff00) >> 8) * (twin_argb32_t) wght << 4) & 0x0000ff00;
-    *b += ((((v & 0x000000ff) >> 0) * (twin_argb32_t) wght) >> 4) & 0x000000ff;
+    if (radius == 2){ // 2^8
+        *r += ((((v & 0x00ff0000) >> 16) * (twin_argb32_t) wght) << 12) & 0x00ff0000;
+        *g += ((((v & 0x0000ff00) >> 8) * (twin_argb32_t) wght) << 4) & 0x0000ff00;
+        *b += ((((v & 0x000000ff) >> 0) * (twin_argb32_t) wght) >> 4) & 0x000000ff;
+    }
+    else if(radius == 3){ // 2^12
+        *r += ((((v & 0x00ff0000) >> 16) * (twin_argb32_t) wght) << 10) & 0x00ff0000;
+        *g += (((v & 0x0000ff00) >> 8) * (twin_argb32_t) wght << 2) & 0x0000ff00;
+        *b += ((((v & 0x000000ff) >> 0) * (twin_argb32_t) wght) >> 6) & 0x000000ff;
+    }
+    else if(radius == 4){ // 2^16
+        *r += ((((v & 0x00ff0000) >> 16) * (twin_argb32_t) wght) << 8) & 0x00ff0000;
+        *g += (((v & 0x0000ff00) >> 8) * (twin_argb32_t) wght) & 0x0000ff00;
+        *b += ((((v & 0x000000ff) >> 0) * (twin_argb32_t) wght) >>8) & 0x000000ff;
+    }
     return;
 }
 // https://github.com/sudara/melatonin_blur/blob/main/melatonin/implementations/naive.h#L72-L109
-void twin_gaussian_blur(twin_pixmap_t *px)
+void twin_gaussian_blur(twin_pixmap_t *px, int radius)
 {
     if (px->format != TWIN_ARGB32)
         return;
-    
-    uint8_t kernel[5]= {0x01, 0x04, 0x06, 0x04, 0x01}; // 0x16
-                  
+    uint8_t * kernel_pointer =  NULL;
+    if(radius == 2){
+        kernel_pointer = malloc(5 * sizeof(uint8_t));
+        if (kernel_pointer == NULL)
+            return;
+        kernel_pointer[0] = 0x01;
+        kernel_pointer[1] = 0x04;
+        kernel_pointer[2] = 0x06;
+        kernel_pointer[3] = 0x04;
+        kernel_pointer[4] = 0x01;
+    }
+    else if (radius == 3){
+        kernel_pointer = malloc(7 * sizeof(uint8_t));
+        if (kernel_pointer == NULL)
+            return;
+        kernel_pointer[0] = 0x0f;
+        kernel_pointer[1] = 0x06;
+        kernel_pointer[2] = 0x01;
+        kernel_pointer[3] = 0x14;
+        kernel_pointer[4] = 0x01;
+        kernel_pointer[5] = 0x06;
+        kernel_pointer[6] = 0x0f;
+    }
+    else{
+        kernel_pointer = malloc(9 * sizeof(uint8_t));
+        if (kernel_pointer == NULL)
+            return;
+        kernel_pointer[0] = 0x38;
+        kernel_pointer[1] = 0x08;
+        kernel_pointer[2] = 0x1c;
+        kernel_pointer[3] = 0x01;
+        kernel_pointer[4] = 0x46;
+        kernel_pointer[5] = 0x01;
+        kernel_pointer[6] = 0x1c;
+        kernel_pointer[7] = 0x08;
+        kernel_pointer[8] = 0x38;
+    }
     twin_pointer_t ptr, tmp_ptr;
     twin_pixmap_t *tmp_px =
         twin_pixmap_create(px->format, px->width, px->height);
     memcpy(tmp_px->p.v, px->p.v,
            px->width * px->height * twin_bytes_per_pixel(px->format));
-
-    int radius = 2, _y, _x;
+    
+    int _y, _x;
     twin_argb32_t r, g, b;
     for (int screen_y = 0; screen_y < px->height; screen_y++){
         for (int screen_x = 0; screen_x < px->width; screen_x++) {
@@ -757,7 +803,7 @@ void twin_gaussian_blur(twin_pixmap_t *px)
             for (int x = -radius; x <= radius; x++) {
                 _x = min(max(screen_x + x, 0), px->width - 1);
                 tmp_ptr = twin_pixmap_pointer(tmp_px, _x, screen_y);
-                _twin_apply_gaussian(*tmp_ptr.argb32, kernel[x + radius], &r, &g, &b);
+                _twin_apply_gaussian(*tmp_ptr.argb32, *(kernel_pointer + x + radius), &r, &g, &b, radius);
             }
             *ptr.argb32 = (*ptr.argb32 & 0xff000000) | r | g | b;
         }
@@ -769,11 +815,12 @@ void twin_gaussian_blur(twin_pixmap_t *px)
             for (int y = -radius; y <= radius; y++) {
                 _y = min(max(screen_y + y, 0), px->height - 1);
                 tmp_ptr = twin_pixmap_pointer(tmp_px, screen_x, _y);
-                _twin_apply_gaussian(*tmp_ptr.argb32, kernel[y + radius], &r, &g, &b);
+                _twin_apply_gaussian(*tmp_ptr.argb32, *(kernel_pointer + y + radius), &r, &g, &b, radius);
             }
             *ptr.argb32 = (*ptr.argb32 & 0xff000000) | r | g | b;
         }
     }
+    free(kernel_pointer);
     twin_pixmap_destroy(tmp_px);
     return;
 }

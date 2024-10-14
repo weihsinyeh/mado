@@ -104,7 +104,7 @@ int main(void)
 
     twin_screen_set_background(
         tx->screen, load_background(tx->screen, ASSET_PATH "/tux.png"));
-
+    apps_animation_start(tx->screen, "Test", ASSET_PATH "test.png", 20, 20);
 #if defined(CONFIG_DEMO_MULTI)
     apps_multi_start(tx->screen, "Demo", 100, 100, 400, 400);
 #endif
@@ -124,8 +124,8 @@ int main(void)
     apps_spline_start(tx->screen, "Spline", 20, 20, 400, 400);
 #endif
 #if defined(CONFIG_DEMO_ANIMATION)
-    apps_animation_start(tx->screen, "Viewer", ASSET_PATH "nyancat.gif", 20,
-                         20);
+    apps_animation_start(tx->screen, "Viewer", ASSET_PATH "nyancat.gif", 500,
+                         500);
 #endif
 
     twin_dispatch();
