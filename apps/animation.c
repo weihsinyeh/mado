@@ -29,14 +29,14 @@ static void _apps_animation_paint(apps_animation_t *anim)
     } else {
         current_frame = anim->pix;
         twin_fixed_t sx, sy;
-        int desired_width = 300,desired_height = 300;
+        int desired_width = 300 ,desired_height = 300;
 
         sx = twin_fixed_div(twin_int_to_fixed(current_frame->width),
                             twin_int_to_fixed(desired_width));
         sy = twin_fixed_div(twin_int_to_fixed(current_frame->height),
                             twin_int_to_fixed(desired_height));
         twin_matrix_scale(&current_frame->transform, sx, sy);
-        twin_gaussian_blur(current_frame, 3);
+        twin_gaussian_blur(current_frame, 2);
     }
 
     twin_operand_t srcop = {

@@ -757,11 +757,22 @@ void twin_gaussian_blur(twin_pixmap_t *px, int radius)
         if (kernel_pointer == NULL)
             return;
         kernel_pointer[0] = 0x01;
+        kernel_pointer[1] = 0x02;
+        kernel_pointer[2] = 0x03;
+        kernel_pointer[3] = 0x02;
+        kernel_pointer[4] = 0x01;
+    }
+    /*
+    if(radius == 2){
+        kernel_pointer = malloc(5 * sizeof(uint8_t));
+        if (kernel_pointer == NULL)
+            return;
+        kernel_pointer[0] = 0x01;
         kernel_pointer[1] = 0x04;
         kernel_pointer[2] = 0x06;
         kernel_pointer[3] = 0x04;
         kernel_pointer[4] = 0x01;
-    }
+    }*/
     else if (radius == 3){
         kernel_pointer = malloc(7 * sizeof(uint8_t));
         if (kernel_pointer == NULL)
@@ -788,40 +799,135 @@ void twin_gaussian_blur(twin_pixmap_t *px, int radius)
         kernel_pointer[7] = 0x08;
         kernel_pointer[8] = 0x38;
     }
-    twin_pointer_t ptr, tmp_ptr;
-    twin_pixmap_t *tmp_px =
-        twin_pixmap_create(px->format, px->width, px->height);
-    memcpy(tmp_px->p.v, px->p.v,
-           px->width * px->height * twin_bytes_per_pixel(px->format));
+    twin_pointer_t ptr, first_ptr, last_ptr;
     
-    int _y, _x;
-    twin_argb32_t r, g, b;
-    for (int screen_y = 0; screen_y < px->height; screen_y++){
-        for (int screen_x = 0; screen_x < px->width; screen_x++) {
-            r = 0, g = 0, b = 0;
-            ptr = twin_pixmap_pointer(px, screen_x, screen_y);
-            for (int x = -radius; x <= radius; x++) {
-                _x = min(max(screen_x + x, 0), px->width - 1);
-                tmp_ptr = twin_pixmap_pointer(tmp_px, _x, screen_y);
-                _twin_apply_gaussian(*tmp_ptr.argb32, *(kernel_pointer + x + radius), &r, &g, &b, radius);
+    
+    int _y, _x, first, last;
+    twin_argb32_t sumIN_r, sumIN_g, sumIN_b, sumOUT_r, sumOUT_g, sumOUT_b, sum_r, sum_g, sum_b;
+    radius = 2;
+    for (int screen_y = 0; screen_y < px->height; screen_y++){  
+        sumIN_r = 0, sumIN_g = 0, sumIN_b = 0;      
+        sumOUT_r = 0, sumOUT_g = 0, sumOUT_b = 0;
+        sum_r = 0, sum_g = 0, sum_b = 0;
+        for (int x = -radius; x <= radius; x++)
+        {
+            _x = min(max(x, 0), px->width - 1); 
+            uint8_t weight = (uint8_t) (x < 0 ? radius + x + 1 : radius - x + 1);
+            printf("weight : %x\n",weight);
+            ptr = twin_pixmap_pointer(px, _x, screen_y);
+            sum_r += (((*ptr.argb32 & 0x00ff0000) * weight)/ 9);
+            sum_g += (((*ptr.argb32 & 0x0000ff00) * weight)/ 9);
+            sum_b += (((*ptr.argb32 & 0x000000ff) * weight)/ 9);
+            if (x <= 0){
+                sumOUT_r += (*ptr.argb32 & 0x00ff0000);
+                sumOUT_g += (*ptr.argb32 & 0x0000ff00);
+                sumOUT_b += (*ptr.argb32 & 0x000000ff);
             }
-            *ptr.argb32 = (*ptr.argb32 & 0xff000000) | r | g | b;
+            if(x >= 0){
+                sumIN_r += (*ptr.argb32 & 0x00ff0000);
+                sumIN_g += (*ptr.argb32 & 0x0000ff00);
+                sumIN_b += (*ptr.argb32 & 0x000000ff);
+            }
+        }
+        ptr = twin_pixmap_pointer(px, 0, screen_y);
+        *ptr.argb32 = (*ptr.argb32 & 0xff000000) | sum_r & 0x00ff0000 | sum_g & 0x0000ff00 | sum_b & 0x000000ff;
+
+        for (int x = 1; x < px->width; x++){
+            
+            first = min(max((x-1) - radius, 0), px->width - 1);
+            last = min(max((x + radius), 0), px->width - 1);
+
+            first_ptr = twin_pixmap_pointer(px, first, screen_y);
+            last_ptr = twin_pixmap_pointer(px, last, screen_y);
+            ptr = twin_pixmap_pointer(px, x, screen_y); 
+            sum_r -= sumOUT_r;
+            sum_g -= sumOUT_g;
+            sum_b -= sumOUT_b;
+
+            sumOUT_r -= (*first_ptr.argb32 & 0x00ff0000);
+            sumOUT_g -= (*first_ptr.argb32 & 0x0000ff00);
+            sumOUT_b -= (*first_ptr.argb32 & 0x000000ff);
+
+            sumOUT_r += (*ptr.argb32 & 0x00ff0000);
+            sumOUT_g += (*ptr.argb32 & 0x0000ff00);
+            sumOUT_b += (*ptr.argb32 & 0x000000ff);
+
+            sumIN_r -= (*ptr.argb32 & 0x00ff0000);
+            sumIN_g -= (*ptr.argb32 & 0x0000ff00);
+            sumIN_b -= (*ptr.argb32 & 0x000000ff);
+
+            sumIN_r += (*last_ptr.argb32 & 0x00ff0000);
+            sumIN_g += (*last_ptr.argb32 & 0x0000ff00);
+            sumIN_b += (*last_ptr.argb32 & 0x000000ff);
+
+            sum_r += sumIN_r;
+            sum_g += sumIN_g;
+            sum_b += sumIN_b;
+            *ptr.argb32 = (*ptr.argb32 & 0xff000000) | sum_r & 0x00ff0000 | sum_g & 0x0000ff00 | sum_b & 0x000000ff;
         }
     }
+
     for (int screen_x = 0; screen_x < px->width; screen_x++){
-        for (int screen_y = 0; screen_y < px->height; screen_y++) {
-            r = 0, g = 0, b = 0;
-            ptr = twin_pixmap_pointer(px, screen_x, screen_y);
-            for (int y = -radius; y <= radius; y++) {
-                _y = min(max(screen_y + y, 0), px->height - 1);
-                tmp_ptr = twin_pixmap_pointer(tmp_px, screen_x, _y);
-                _twin_apply_gaussian(*tmp_ptr.argb32, *(kernel_pointer + y + radius), &r, &g, &b, radius);
+        sumIN_r = 0, sumIN_g = 0, sumIN_b = 0;
+        sumOUT_r = 0, sumOUT_g = 0, sumOUT_b = 0;
+        sum_r = 0, sum_g = 0, sum_b = 0;
+        for (int y = -radius; y <= radius; y++)
+        {
+            _y = min(max(y, 0), px->height - 1); 
+            uint8_t weight = (uint8_t)(y < 0 ? radius + y + 1 : radius - y + 1);
+            printf("weight : %x\n",weight);
+            ptr = twin_pixmap_pointer(px, screen_x, _y);
+            sum_r += (((*ptr.argb32 & 0x00ff0000) * weight) / 9) ;
+            sum_g += (((*ptr.argb32 & 0x0000ff00) * weight) / 9) ;
+            sum_b += (((*ptr.argb32 & 0x000000ff) * weight) / 9) ;
+            if (y <= 0){
+                sumOUT_r += (*ptr.argb32 & 0x00ff0000);
+                sumOUT_g += (*ptr.argb32 & 0x0000ff00);
+                sumOUT_b += (*ptr.argb32 & 0x000000ff);
             }
-            *ptr.argb32 = (*ptr.argb32 & 0xff000000) | r | g | b;
+            if(y >= 0){
+                sumIN_r += (*ptr.argb32 & 0x00ff0000);
+                sumIN_g += (*ptr.argb32 & 0x0000ff00);
+                sumIN_b += (*ptr.argb32 & 0x000000ff);
+            }
+        }
+        printf("######### radius : %d\n", radius);
+        ptr = twin_pixmap_pointer(px, screen_x, 0);
+        *ptr.argb32 = (*ptr.argb32 & 0xff000000) | sum_r & 0x00ff0000 | sum_g & 0x0000ff00 | sum_b & 0x000000ff;
+        for (int y = 1; y < px->height; y++){
+            first = min(max((y-1) - radius, 0), px->height - 1);
+            last = min(max((y + radius), 0), px->height - 1);
+
+            first_ptr = twin_pixmap_pointer(px, screen_x, first);
+            last_ptr = twin_pixmap_pointer(px, screen_x, last);
+            ptr = twin_pixmap_pointer(px, screen_x, y);
+
+            sum_r -= sumOUT_r;
+            sum_g -= sumOUT_g;
+            sum_b -= sumOUT_b;
+            sumOUT_r -= (*first_ptr.argb32 & 0x00ff0000);
+            sumOUT_g -= (*first_ptr.argb32 & 0x0000ff00);
+            sumOUT_b -= (*first_ptr.argb32 & 0x000000ff);
+
+            sumOUT_r += (*ptr.argb32 & 0x00ff0000);
+            sumOUT_g += (*ptr.argb32 & 0x0000ff00);
+            sumOUT_b += (*ptr.argb32 & 0x000000ff);
+
+            sumIN_r -= (*ptr.argb32 & 0x00ff0000);
+            sumIN_g -= (*ptr.argb32 & 0x0000ff00);
+            sumIN_b -= (*ptr.argb32 & 0x000000ff);
+
+            sumIN_r += (*last_ptr.argb32 & 0x00ff0000);
+            sumIN_g += (*last_ptr.argb32 & 0x0000ff00);
+            sumIN_b += (*last_ptr.argb32 & 0x000000ff);
+
+            sum_r += sumIN_r;
+            sum_g += sumIN_g;
+            sum_b += sumIN_b;
+            *ptr.argb32 = (*ptr.argb32 & 0xff000000) | sum_r & 0x00ff0000 | sum_g & 0x0000ff00 | sum_b & 0x000000ff;
         }
     }
     free(kernel_pointer);
-    twin_pixmap_destroy(tmp_px);
     return;
 }
 
