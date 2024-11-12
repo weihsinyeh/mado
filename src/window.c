@@ -23,7 +23,8 @@ twin_window_t *twin_window_create(twin_screen_t *screen,
                                   twin_coord_t x,
                                   twin_coord_t y,
                                   twin_coord_t width,
-                                  twin_coord_t height)
+                                  twin_coord_t height,
+                                  bool shadow)
 {
     twin_window_t *window = malloc(sizeof(twin_window_t));
     twin_coord_t left, top, right, bottom;
@@ -59,6 +60,20 @@ twin_window_t *twin_window_create(twin_screen_t *screen,
     twin_pixmap_origin_to_clip(window->pixmap);
     window->pixmap->window = window;
     twin_pixmap_move(window->pixmap, x, y);
+    window->shadow = shadow;
+    if (window->shadow) {
+        window->shadow_offset_x, window->shadow_offset_y = 50, 50;
+        window->shadow_color = 0x55000000;
+        window->shadow_pixmap = twin_pixmap_create(format, width, height);
+        window->shadow_pixmap->shadow = true;
+        twin_pixmap_move(window->shadow_pixmap, x + 50, y + 50);
+        if (window->shadow_pixmap == NULL) {
+            twin_pixmap_destroy(window->shadow_pixmap);
+            return;
+        }
+        twin_shadow_visible(window->shadow_pixmap, window);
+    } else
+        window->shadow_pixmap = NULL;
     window->damage = window->client;
     window->client_grab = false;
     window->want_focus = false;
@@ -78,17 +93,31 @@ void twin_window_destroy(twin_window_t *window)
     twin_pixmap_destroy(window->pixmap);
     free(window->name);
     free(window);
+    if (window->shadow_pixmap)
+        twin_pixmap_destroy(window->shadow_pixmap);
+    free(window->shadow_pixmap);
 }
 
 void twin_window_show(twin_window_t *window)
 {
+    if (window->shadow_pixmap)
+        twin_pixmap_show(window->shadow_pixmap, window->screen,
+                         window->screen->top);
     if (window->pixmap != window->screen->top)
         twin_pixmap_show(window->pixmap, window->screen, window->screen->top);
+}
+
+void twin_shadow_visible(twin_pixmap_t *pixmap, twin_window_t *window)
+{
+    twin_glass_fill(window->shadow_pixmap, 0x55000000, TWIN_OVER, 0, 0,
+                    pixmap->width, pixmap->height);
 }
 
 void twin_window_hide(twin_window_t *window)
 {
     twin_pixmap_hide(window->pixmap);
+    if (window->shadow_pixmap)
+        twin_pixmap_hide(window->shadow_pixmap);
 }
 
 void twin_window_configure(twin_window_t *window,
@@ -101,6 +130,9 @@ void twin_window_configure(twin_window_t *window,
     bool need_repaint = false;
 
     twin_pixmap_disable_update(window->pixmap);
+    if (window->shadow_pixmap)
+        twin_pixmap_disable_update(window->shadow_pixmap);
+
     if (style != window->style) {
         window->style = style;
         need_repaint = true;
@@ -112,6 +144,8 @@ void twin_window_configure(twin_window_t *window,
         window->pixmap = twin_pixmap_create(old->format, width, height);
         window->pixmap->window = window;
         twin_pixmap_move(window->pixmap, x, y);
+        if (window->shadow)
+            twin_pixmap_move(window->shadow_pixmap, x + 50, y + 50);
         if (old->screen)
             twin_pixmap_show(window->pixmap, window->screen, old);
         for (i = 0; i < old->disable; i++)
@@ -122,12 +156,29 @@ void twin_window_configure(twin_window_t *window,
                          window->client.top, window->client.right,
                          window->client.bottom);
         twin_pixmap_origin_to_clip(window->pixmap);
+
+        if (window->shadow) {
+            window->shadow_pixmap =
+                twin_pixmap_create(old->format, width, height);
+            window->shadow_pixmap->shadow = true;
+            twin_pixmap_move(window->shadow_pixmap, x + 50, y + 50);
+            if (window->shadow_pixmap) {
+                twin_pixmap_destroy(window->shadow_pixmap);
+                return;
+            }
+            twin_shadow_visible(window->shadow_pixmap, window);
+        }
     }
-    if (x != window->pixmap->x || y != window->pixmap->y)
+    if (x != window->pixmap->x || y != window->pixmap->y) {
         twin_pixmap_move(window->pixmap, x, y);
+        if (window->shadow_pixmap)
+            twin_pixmap_move(window->shadow_pixmap, x + 50, y + 50);
+    }
     if (need_repaint)
         twin_window_draw(window);
     twin_pixmap_enable_update(window->pixmap);
+    if (window->shadow_pixmap)
+        twin_pixmap_enable_update(window->shadow_pixmap);
 }
 
 void twin_window_style_size(twin_window_style_t style, twin_rect_t *size)
@@ -191,6 +242,8 @@ static void twin_window_frame(twin_window_t *window)
     twin_fill(pixmap, 0x00000000, TWIN_SOURCE, 0, 0, pixmap->width,
               window->client.top);
 
+    if (window->shadow)
+        twin_shadow_visible(window->shadow_pixmap, window);
     path = twin_path_create();
 
 
@@ -307,12 +360,18 @@ void twin_window_draw(twin_window_t *window)
                      window->damage.right, window->damage.bottom);
     twin_screen_disable_update(window->screen);
 
+    if (window->shadow)
+        twin_pixmap_disable_update(window->shadow_pixmap);
     (*window->draw)(window);
 
     /* damage matching screen area */
     twin_pixmap_damage(pixmap, window->damage.left, window->damage.top,
                        window->damage.right, window->damage.bottom);
 
+    if (window->shadow)
+        twin_pixmap_damage(window->shadow_pixmap, window->damage.left,
+                           window->damage.top, window->damage.right,
+                           window->damage.bottom);
     twin_screen_enable_update(window->screen);
 
     /* clear damage and restore clip */
@@ -321,6 +380,8 @@ void twin_window_draw(twin_window_t *window)
     twin_pixmap_reset_clip(pixmap);
     twin_pixmap_clip(pixmap, window->client.left, window->client.top,
                      window->client.right, window->client.bottom);
+    if (window->shadow)
+        twin_pixmap_enable_update(window->shadow_pixmap);
 }
 
 /* window keep track of local damage */
