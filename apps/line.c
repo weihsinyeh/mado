@@ -100,6 +100,9 @@ static void _apps_line_init(apps_line_t *line,
 {
     static const twin_widget_layout_t preferred = {0, 0, 1, 1};
     _twin_widget_init(&line->widget, parent, 0, preferred, dispatch);
+    twin_widget_set_background(&line->widget,
+                               parent->widget.window->pixmap->width,
+                               parent->widget.window->pixmap->height);
     twin_widget_set(&line->widget, 0xffffffff);
     line->line_width = twin_int_to_fixed(30);
     line->cap_style = TwinCapProjecting;

@@ -517,6 +517,11 @@ typedef enum _twin_shape {
     TwinShapeEllipse,
 } twin_shape_t;
 
+typedef struct _twin_background {
+    twin_pixmap_t *p;
+    twin_argb32_t c;
+} twin_background_t;
+
 struct _twin_widget {
     twin_window_t *window;
     twin_widget_t *next;
@@ -527,7 +532,7 @@ struct _twin_widget {
     bool paint;
     bool layout;
     bool want_focus;
-    twin_argb32_t background;
+    twin_background_t background;
     twin_widget_layout_t preferred;
     twin_shape_t shape;
     twin_fixed_t radius;
@@ -1175,6 +1180,9 @@ twin_widget_t *twin_widget_create(twin_box_t *parent,
 
 void twin_widget_set(twin_widget_t *widget, twin_argb32_t background);
 
+void twin_widget_set_background(twin_widget_t *widget,
+                                twin_coord_t width,
+                                twin_coord_t height);
 /*
  * window.c
  */

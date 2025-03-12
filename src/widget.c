@@ -8,7 +8,7 @@
 #include <stdlib.h>
 
 #include "twin_private.h"
-
+#define ASSET_PATH "assets/"
 static twin_path_t *_twin_path_shape(twin_shape_t shape,
                                      twin_coord_t left,
                                      twin_coord_t top,
@@ -45,6 +45,37 @@ static twin_path_t *_twin_path_shape(twin_shape_t shape,
     return path;
 }
 
+void twin_widget_set_background(twin_widget_t *widget,
+                                twin_coord_t width,
+                                twin_coord_t height)
+{
+    twin_pixmap_t *raw_background = NULL;
+#if defined(CONFIG_LOADER_PNG)
+    raw_background = twin_pixmap_from_file(ASSET_PATH "tux.png", TWIN_ARGB32);
+#endif
+    if (!raw_background)
+        return;
+
+    twin_pixmap_t *scaled_background =
+        twin_pixmap_create(TWIN_ARGB32, width, height);
+    twin_fixed_t sx, sy;
+    sx = twin_fixed_div(twin_int_to_fixed(raw_background->width),
+                        twin_int_to_fixed(width));
+    sy = twin_fixed_div(twin_int_to_fixed(raw_background->height),
+                        twin_int_to_fixed(height));
+
+    twin_matrix_scale(&raw_background->transform, sx, sy);
+    twin_operand_t srcop = {
+        .source_kind = TWIN_PIXMAP,
+        .u.pixmap = raw_background,
+    };
+
+    twin_composite(scaled_background, 0, 0, &srcop, 0, 0, 0, 0, 0, TWIN_SOURCE,
+                   scaled_background->width, scaled_background->height);
+    widget->background.p = scaled_background;
+    twin_pixmap_destroy(raw_background);
+}
+
 void _twin_widget_paint_shape(twin_widget_t *widget,
                               twin_shape_t shape,
                               twin_coord_t left,
@@ -55,14 +86,23 @@ void _twin_widget_paint_shape(twin_widget_t *widget,
 {
     twin_pixmap_t *pixmap = widget->window->pixmap;
 
-    if (shape == TwinShapeRectangle)
-        twin_fill(pixmap, widget->background, TWIN_SOURCE, left, top, right,
-                  bottom);
-    else {
+    if (shape == TwinShapeRectangle) {
+        if (widget->background.p != NULL) {
+            twin_pixmap_t *background_pixmap = widget->background.p;
+            twin_operand_t srcop = {
+                .source_kind = TWIN_PIXMAP,
+                .u.pixmap = background_pixmap,
+            };
+            twin_composite(pixmap, 0, 0, &srcop, 0, 0, 0, 0, 0, TWIN_SOURCE,
+                           pixmap->width, pixmap->height);
+        } else
+            twin_fill(pixmap, widget->background.c, TWIN_SOURCE, left, top,
+                      right, bottom);
+    } else {
         twin_path_t *path =
             _twin_path_shape(shape, left, top, right, bottom, radius);
         if (path) {
-            twin_paint_path(pixmap, widget->background, path);
+            twin_paint_path(pixmap, widget->background.c, path);
             twin_path_destroy(path);
         }
     }
@@ -125,7 +165,8 @@ void _twin_widget_init(twin_widget_t *widget,
     widget->paint = true;
     widget->layout = true;
     widget->want_focus = false;
-    widget->background = 0x00000000;
+    widget->background.c = 0x00000000;
+    widget->background.p = NULL;
     widget->extents.left = widget->extents.top = 0;
     widget->extents.right = widget->extents.bottom = 0;
     widget->preferred = preferred;
@@ -229,12 +270,12 @@ twin_widget_t *twin_widget_create(twin_box_t *parent,
         .stretch_height = stretch_height,
     };
     _twin_widget_init(widget, parent, 0, preferred, _twin_widget_dispatch);
-    widget->background = background;
+    widget->background.c = background;
     return widget;
 }
 
 void twin_widget_set(twin_widget_t *widget, twin_argb32_t background)
 {
-    widget->background = background;
+    widget->background.c = background;
     _twin_widget_queue_paint(widget);
 }

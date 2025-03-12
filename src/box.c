@@ -195,7 +195,7 @@ twin_dispatch_result_t _twin_box_dispatch(twin_widget_t *widget,
 
                 twin_pixmap_get_origin(pixmap, &ox, &oy);
                 if (child->shape != TwinShapeRectangle)
-                    twin_fill(child->window->pixmap, widget->background,
+                    twin_fill(child->window->pixmap, widget->background.c,
                               TWIN_SOURCE, child->extents.left,
                               child->extents.top, child->extents.right,
                               child->extents.bottom);
