@@ -1124,6 +1124,15 @@ void twin_path_quadratic_curve(twin_path_t *path,
                                twin_fixed_t y2);
 
 /*
+ * shape.c
+ */
+
+void twin_shape(twin_pixmap_t *pixmap,
+                twin_point_t *points,
+                twin_point_t *oldpoints,
+                int n_points);
+
+/*
  * timeout.c
  */
 

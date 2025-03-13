@@ -135,6 +135,11 @@ config DEMO_SPLINE
     default y
     depends on DEMO_APPLICATIONS 
 
+config DEMO_SHAPE
+    bool "Build shape manimpuation"
+    default y
+    depends on DEMO_APPLICATIONS
+
 config DEMO_ANIMATION
     bool "Build animation demo"
     default y

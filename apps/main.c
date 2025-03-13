@@ -20,8 +20,8 @@
 #include "apps_image.h"
 #include "apps_line.h"
 #include "apps_multi.h"
+#include "apps_shape.h"
 #include "apps_spline.h"
-
 #define WIDTH 640
 #define HEIGHT 480
 
@@ -123,6 +123,9 @@ int main(void)
 #endif
 #if defined(CONFIG_DEMO_SPLINE)
     apps_spline_start(tx->screen, "Spline", 20, 20, 400, 400);
+#endif
+#if defined(CONFIG_DEMO_SHAPE)
+    apps_shape_start(tx->screen, "Shape", 20, 20, 400, 400);
 #endif
 #if defined(CONFIG_DEMO_ANIMATION)
     apps_animation_start(tx->screen, "Viewer", ASSET_PATH "nyancat.gif", 20,
