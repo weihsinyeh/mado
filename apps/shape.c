@@ -122,8 +122,8 @@ static int _apps_shape_hit(apps_control_t *control,
         twin_fixed_t py = twin_sfixed_to_fixed(
             _twin_matrix_y(&(control->transition), control->points[i].x,
                            control->points[i].y));
-        if (twin_fixed_abs(x - px) < control->width / 2 &&
-            twin_fixed_abs(y - py) < control->width / 2)
+        if (twin_fixed_abs(x - px) < twin_int_to_fixed(10) &&
+            twin_fixed_abs(y - py) < twin_int_to_fixed(10))
             return i;
     }
     return -1;
@@ -193,8 +193,10 @@ static void _apps_shape_init(apps_control_t *control,
 #if defined(CONFIG_LOADER_PNG)
     raw_background = twin_pixmap_from_file(ASSET_PATH "tux.png", TWIN_ARGB32);
 #endif
-    if (!raw_background)
+    if (!raw_background){
+        printf("HI");
         return;
+    }
 
     twin_pixmap_t *scaled_background =
         twin_pixmap_create(TWIN_ARGB32, parent->widget.window->pixmap->width,
