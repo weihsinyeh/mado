@@ -193,10 +193,8 @@ static void _apps_shape_init(apps_control_t *control,
 #if defined(CONFIG_LOADER_PNG)
     raw_background = twin_pixmap_from_file(ASSET_PATH "tux.png", TWIN_ARGB32);
 #endif
-    if (!raw_background){
-        printf("HI");
+    if (!raw_background)
         return;
-    }
 
     twin_pixmap_t *scaled_background =
         twin_pixmap_create(TWIN_ARGB32, parent->widget.window->pixmap->width,
@@ -224,7 +222,6 @@ static void _apps_shape_init(apps_control_t *control,
 static apps_control_t *apps_shape_create(twin_box_t *parent, int n_points)
 {
     apps_control_t *control = malloc(sizeof(apps_control_t));
-
     _apps_shape_init(control, parent, _apps_shape_dispatch, n_points);
     return control;
 }
